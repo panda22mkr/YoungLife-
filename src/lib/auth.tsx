@@ -19,6 +19,9 @@ export function calcAge(birth: Date, now: Date = new Date()): number {
   return age;
 }
 
+// Минимальный возраст для регистрации (пока 14 лет).
+export const MIN_AGE = 14;
+
 // Формат ДД.ММ.ГГГГ -> Date (или null, если дата неверна)
 export function parseBirthDate(input: string): Date | null {
   const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(input.trim());

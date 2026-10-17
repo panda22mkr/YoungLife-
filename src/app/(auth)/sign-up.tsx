@@ -2,7 +2,7 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text } from 'react-native';
 import { Button, Field } from '@/components/ui';
-import { parseBirthDate, useAuth } from '@/lib/auth';
+import { calcAge, MIN_AGE, parseBirthDate, useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
 import { colors, space } from '@/lib/theme';
 
@@ -18,6 +18,7 @@ export default function SignUp() {
     if (!name || !email || !password || !birth) return Alert.alert(t('fillAll'));
     const date = parseBirthDate(birth);
     if (!date) return Alert.alert(t('invalidDate'));
+    if (calcAge(date) < MIN_AGE) return Alert.alert(t('tooYoung'));
     signUp(name, email, password, date);
   };
 

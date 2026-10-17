@@ -1,13 +1,13 @@
 export const colors = {
-  bg: '#0B2545',
-  card: '#13315C',
-  cardAlt: '#1B3F73',
+  bg: '#121212',
+  card: '#1E1E1E',
+  cardAlt: '#2C2C2C',
   green: '#7AC143',
   greenDark: '#5E9B31',
   white: '#FFFFFF',
-  muted: '#A9B8CE',
+  muted: '#A3A3A3',
   danger: '#FF6B6B',
-  border: '#24508F',
+  border: '#333333',
 };
 
 export const radius = { sm: 8, md: 14, lg: 20 };
