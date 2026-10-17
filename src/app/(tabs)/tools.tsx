@@ -1,44 +1,53 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ComponentProps } from 'react';
-import { ScrollView, Text, View } from 'react-native';
-import { Card } from '@/components/ui';
+import { ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Card, Chip, IconBadge, ScreenTitle, Txt } from '@/components/ui';
 import { isLeader, useAuth } from '@/lib/auth';
 import { TKey, useI18n } from '@/lib/i18n';
-import { colors, space } from '@/lib/theme';
+import { space } from '@/lib/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
+// Три инструмента лидера YoungLife: Дерево, Список, Карта. Пока это заготовки.
 const tools: { icon: IconName; title: TKey; desc: TKey }[] = [
-  { icon: 'git-network', title: 'tree', desc: 'treeDesc' },
-  { icon: 'list', title: 'list', desc: 'listDesc' },
-  { icon: 'map', title: 'map', desc: 'mapDesc' },
+  { icon: 'git-network-outline', title: 'tree', desc: 'treeDesc' },
+  { icon: 'list-outline', title: 'list', desc: 'listDesc' },
+  { icon: 'map-outline', title: 'map', desc: 'mapDesc' },
 ];
 
-// Три инструмента лидера YoungLife: Дерево, Список, Карта. Пока это заготовки.
 export default function ToolsScreen() {
   const { t } = useI18n();
   const { user } = useAuth();
-
-  if (!isLeader(user)) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: colors.muted }}>{t('onlyLeaders')}</Text>
-      </View>
-    );
-  }
+  const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView contentContainerStyle={{ padding: space.md, gap: space.md }}>
-      {tools.map((tool) => (
-        <Card key={tool.title} style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
-          <Ionicons name={tool.icon} size={36} color={colors.green} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.white, fontSize: 20, fontWeight: '700' }}>{t(tool.title)}</Text>
-            <Text style={{ color: colors.muted, marginTop: 2 }}>{t(tool.desc)}</Text>
-            <Text style={{ color: colors.green, marginTop: 6, fontSize: 12 }}>{t('comingSoon')}</Text>
-          </View>
-        </Card>
-      ))}
+    <ScrollView
+      contentContainerStyle={{
+        paddingHorizontal: space.screen,
+        paddingTop: insets.top + space.lg,
+        paddingBottom: space.xl,
+        gap: space.sm + 4,
+      }}>
+      <ScreenTitle title={t('toolsTitle')} />
+      {!isLeader(user) ? (
+        <Txt tone="muted">{t('onlyLeaders')}</Txt>
+      ) : (
+        tools.map((tool) => (
+          <Card key={tool.title} style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
+            <IconBadge name={tool.icon} size={52} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Txt variant="h2">{t(tool.title)}</Txt>
+              <Txt variant="small" tone="muted">
+                {t(tool.desc)}
+              </Txt>
+              <View style={{ marginTop: 4 }}>
+                <Chip label={t('comingSoon')} />
+              </View>
+            </View>
+          </Card>
+        ))
+      )}
     </ScrollView>
   );
 }

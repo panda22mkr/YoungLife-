@@ -1,15 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { Alert, Linking, ScrollView, Text, View } from 'react-native';
-import { Button, Card } from '@/components/ui';
+import { Alert, Linking, ScrollView, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button, Card, DateTile, IconBadge, Txt } from '@/components/ui';
+import { fullText } from '@/lib/dates';
 import { useEvents } from '@/lib/events';
 import { useI18n } from '@/lib/i18n';
-import { colors, space } from '@/lib/theme';
+import { space, usePalette } from '@/lib/theme';
 
 export default function EventDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { events } = useEvents();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const insets = useSafeAreaInsets();
+  const c = usePalette();
   const event = events.find((e) => e.id === id);
   if (!event) return null;
 
@@ -17,27 +21,58 @@ export default function EventDetails() {
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.place)}`);
 
   return (
-    <ScrollView contentContainerStyle={{ padding: space.md, gap: space.md }}>
-      <Stack.Screen options={{ title: event.title }} />
-      <Text style={{ color: colors.white, fontSize: 24, fontWeight: '800' }}>{event.title}</Text>
-      <Text style={{ color: colors.muted, fontSize: 16 }}>{event.description}</Text>
-      <Card style={{ gap: space.sm }}>
-        <Row icon="time" label={t('when')} value={event.when} />
-        <Row icon="location" label={t('where')} value={event.place} />
-        <Row icon="person" label={t('author')} value={event.authorName} />
-      </Card>
-      <Button title={t('openInMaps')} onPress={openMaps} />
-      <Button variant="secondary" title={t('writeAuthor')} onPress={() => Alert.alert(t('chatSoon'))} />
-    </ScrollView>
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ padding: space.screen, gap: space.lg }}>
+        <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
+          <DateTile date={event.startsAt} lang={lang} large />
+          <Txt variant="title" style={{ flex: 1 }}>
+            {event.title}
+          </Txt>
+        </View>
+
+        {event.description ? <Txt tone="muted">{event.description}</Txt> : null}
+
+        <Card style={{ gap: space.md }}>
+          <InfoRow icon="time-outline" label={t('when')} value={fullText(event.startsAt, lang)} />
+          <InfoRow icon="location-outline" label={t('where')} value={event.place} />
+          <InfoRow icon="person-outline" label={t('author')} value={event.authorName} />
+        </Card>
+      </ScrollView>
+
+      <View
+        style={{
+          padding: space.screen,
+          paddingBottom: insets.bottom + space.md,
+          gap: space.sm,
+          backgroundColor: c.bg,
+          borderTopWidth: 1,
+          borderTopColor: c.line,
+        }}>
+        <Button title={t('writeAuthor')} icon="chatbubble-outline" onPress={() => Alert.alert(t('chatSoon'))} />
+        <Button title={t('openInMaps')} variant="secondary" icon="map-outline" onPress={openMaps} />
+      </View>
+    </View>
   );
 }
 
-function Row({ icon, label, value }: { icon: 'time' | 'location' | 'person'; label: string; value: string }) {
+function InfoRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  value: string;
+}) {
   return (
-    <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'center' }}>
-      <Ionicons name={icon} size={18} color={colors.green} />
-      <Text style={{ color: colors.muted }}>{label}:</Text>
-      <Text style={{ color: colors.white, flexShrink: 1 }}>{value}</Text>
+    <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
+      <IconBadge name={icon} />
+      <View style={{ flex: 1 }}>
+        <Txt variant="caption" tone="muted">
+          {label}
+        </Txt>
+        <Txt variant="strong">{value}</Txt>
+      </View>
     </View>
   );
 }

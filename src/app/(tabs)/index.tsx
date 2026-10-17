@@ -1,44 +1,89 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { FlatList, Pressable, Text, View } from 'react-native';
-import { Button, Card } from '@/components/ui';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Card, DateTile, EmptyState, ScreenTitle, Txt } from '@/components/ui';
 import { canCreateEvents, useAuth } from '@/lib/auth';
+import { timeText } from '@/lib/dates';
 import { useEvents } from '@/lib/events';
 import { useI18n } from '@/lib/i18n';
-import { colors, space } from '@/lib/theme';
+import { font, radius, space, touch, usePalette } from '@/lib/theme';
 
 export default function EventsScreen() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { user } = useAuth();
   const { events } = useEvents();
+  const insets = useSafeAreaInsets();
+  const c = usePalette();
+  const canCreate = canCreateEvents(user);
 
   return (
-    <FlatList
-      data={events}
-      keyExtractor={(e) => e.id}
-      contentContainerStyle={{ padding: space.md, gap: space.md }}
-      ListHeaderComponent={
-        <View style={{ gap: space.md }}>
-          <Text style={{ color: colors.white, fontSize: 22, fontWeight: '800' }}>{t('upcoming')}</Text>
-          {canCreateEvents(user) && <Button title={`+ ${t('newEvent')}`} onPress={() => router.push('/event/new')} />}
-        </View>
-      }
-      ListEmptyComponent={<Text style={{ color: colors.muted }}>{t('noEvents')}</Text>}
-      renderItem={({ item }) => (
-        <Pressable onPress={() => router.push({ pathname: '/event/[id]', params: { id: item.id } })}>
-          <Card>
-            <Text style={{ color: colors.white, fontSize: 18, fontWeight: '700' }}>{item.title}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.sm }}>
-              <Ionicons name="time" size={16} color={colors.green} />
-              <Text style={{ color: colors.muted }}>{item.when}</Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-              <Ionicons name="location" size={16} color={colors.green} />
-              <Text style={{ color: colors.muted, flexShrink: 1 }}>{item.place}</Text>
-            </View>
-          </Card>
+    <View style={{ flex: 1 }}>
+      <FlatList
+        data={events}
+        keyExtractor={(e) => e.id}
+        contentContainerStyle={{
+          paddingHorizontal: space.screen,
+          paddingTop: insets.top + space.lg,
+          paddingBottom: 112,
+          gap: space.sm + 4,
+        }}
+        ListHeaderComponent={<ScreenTitle title={t('eventsTitle')} subtitle={t('eventsHint')} />}
+        ListEmptyComponent={<EmptyState icon="calendar-outline" title={t('noEventsTitle')} hint={t('noEventsHint')} />}
+        renderItem={({ item }) => (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/event/[id]', params: { id: item.id } })}
+            style={({ pressed }) => (pressed ? { opacity: 0.85, transform: [{ scale: 0.99 }] } : undefined)}>
+            <Card style={{ flexDirection: 'row', gap: space.md, alignItems: 'center', padding: 14 }}>
+              <DateTile date={item.startsAt} lang={lang} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <Txt variant="h2" numberOfLines={2}>
+                  {item.title}
+                </Txt>
+                <Meta icon="time-outline" text={timeText(item.startsAt)} />
+                <Meta icon="location-outline" text={item.place} />
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={c.muted} />
+            </Card>
+          </Pressable>
+        )}
+      />
+
+      {canCreate && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('newEvent')}
+          onPress={() => router.push('/event/new')}
+          style={({ pressed }) => ({
+            position: 'absolute',
+            right: space.screen,
+            bottom: space.screen,
+            minHeight: touch,
+            borderRadius: radius.button,
+            backgroundColor: c.green,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: space.sm,
+            paddingHorizontal: space.lg,
+            opacity: pressed ? 0.85 : 1,
+          })}>
+          <Ionicons name="add" size={24} color={c.onGreen} />
+          <Text style={{ fontFamily: font.bold, fontSize: 16, color: c.onGreen }}>{t('newEvent')}</Text>
         </Pressable>
       )}
-    />
+    </View>
+  );
+}
+
+function Meta({ icon, text }: { icon: 'time-outline' | 'location-outline'; text: string }) {
+  const c = usePalette();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <Ionicons name={icon} size={16} color={c.muted} />
+      <Txt variant="small" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>
+        {text}
+      </Txt>
+    </View>
   );
 }
