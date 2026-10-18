@@ -2,14 +2,14 @@ import Constants from 'expo-constants';
 import { Alert, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, IconBadge, ScreenTitle, Segmented, SwitchRow, Txt } from '@/components/ui';
-import { Role, useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
 import { Lang, useI18n } from '@/lib/i18n';
 import { ThemeChoice, usePrefs } from '@/lib/prefs';
 import { space } from '@/lib/theme';
 
 export default function SettingsScreen() {
   const { t, lang, setLang } = useI18n();
-  const { user, signOut, setDemoRole } = useAuth();
+  const { user, signOut } = useAuth();
   const { theme, setTheme, notifications, setNotifications } = usePrefs();
   const insets = useSafeAreaInsets();
   if (!user) return null;
@@ -70,21 +70,6 @@ export default function SettingsScreen() {
             {t('donateSoon')}
           </Txt>
         </View>
-      </Card>
-
-      <Card style={{ gap: space.sm }}>
-        <Txt variant="small" tone="muted">
-          {t('demoRole')}
-        </Txt>
-        <Segmented<Role>
-          value={user.role}
-          onChange={setDemoRole}
-          options={[
-            { key: 'guest', label: t('roleGuest') },
-            { key: 'leader', label: t('roleLeader') },
-            { key: 'senior', label: t('roleSeniorShort') },
-          ]}
-        />
       </Card>
 
       <Button

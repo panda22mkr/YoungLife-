@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Field, ScreenTitle } from '@/components/ui';
-import { calcAge, MIN_AGE, parseBirthDate, useAuth } from '@/lib/auth';
+import { calcAge, MIN_AGE, MIN_PASSWORD, parseBirthDate, useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
 import { space } from '@/lib/theme';
 
@@ -16,12 +16,22 @@ export default function SignUp() {
   const [password, setPassword] = useState('');
   const [birth, setBirth] = useState('');
 
-  const submit = () => {
-    if (!name || !email || !password || !birth) return Alert.alert(t('fillAll'));
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!name.trim() || !email || !password || !birth) return Alert.alert(t('fillAll'));
     const date = parseBirthDate(birth);
     if (!date) return Alert.alert(t('invalidDate'));
     if (calcAge(date) < MIN_AGE) return Alert.alert(t('tooYoung'));
-    signUp(name, email, password, date);
+    if (password.length < MIN_PASSWORD) return Alert.alert(t('weakPassword'));
+    setBusy(true);
+    const result = await signUp(name, email, password, date);
+    setBusy(false);
+    if (result.error) return Alert.alert(t(result.error));
+    if (result.needsConfirm) {
+      Alert.alert(t('checkEmail'));
+      router.back();
+    }
   };
 
   return (
@@ -43,7 +53,13 @@ export default function SignUp() {
           keyboardType="email-address"
           autoComplete="email"
         />
-        <Field label={t('password')} value={password} onChangeText={setPassword} secureTextEntry />
+        <Field
+          label={t('password')}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          placeholder={t('passwordHint')}
+        />
         <Field
           label={t('birthDate')}
           value={birth}
@@ -52,7 +68,7 @@ export default function SignUp() {
           placeholder={t('birthHint')}
         />
         <View style={{ gap: space.sm, marginTop: space.sm }}>
-          <Button title={t('signUp')} onPress={submit} />
+          <Button title={t('signUp')} onPress={submit} loading={busy} />
           <Button title={t('haveAccount')} variant="ghost" onPress={() => router.back()} />
         </View>
       </ScrollView>

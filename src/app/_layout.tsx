@@ -19,9 +19,17 @@ import { font, usePalette, useScheme } from '@/lib/theme';
 SplashScreen.preventAutoHideAsync();
 
 function Routes() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const c = usePalette();
   const scheme = useScheme();
+
+  // Заставка закрывается, когда проверен вход (чтобы не мигал экран входа).
+  useEffect(() => {
+    if (!loading) SplashScreen.hideAsync();
+  }, [loading]);
+
+  if (loading) return null;
+
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
@@ -57,10 +65,6 @@ export default function RootLayout() {
     Onest_700Bold,
     Onest_800ExtraBold,
   });
-
-  useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
 
   if (!fontsLoaded) return null;
 

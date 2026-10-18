@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useAuth } from './auth';
+import { supabase } from './supabase';
 
 export type YLEvent = {
   id: string;
@@ -9,46 +11,95 @@ export type YLEvent = {
   authorName: string;
 };
 
-function nextWeekday(weekday: number, hour: number, minute = 0): Date {
-  const d = new Date();
-  d.setHours(hour, minute, 0, 0);
-  const diff = (weekday - d.getDay() + 7) % 7 || 7;
-  d.setDate(d.getDate() + diff);
-  return d;
-}
+export type NewEvent = Pick<YLEvent, 'title' | 'description' | 'place' | 'startsAt'>;
 
-// Демонстрационные данные. Позже события будут храниться на сервере.
-const seed: YLEvent[] = [
-  {
-    id: '1',
-    title: 'Клуб YoungLife: вечер игр',
-    description: 'Игры, музыка, чай и новые друзья. Приходите с друзьями!',
-    place: 'Молодёжный центр, ул. Примерная, 1',
-    startsAt: nextWeekday(5, 19),
-    authorName: 'Демо-лидер',
-  },
-  {
-    id: '2',
-    title: 'Campaigners: встреча',
-    description: 'Небольшая группа для разговоров и вопросов о жизни.',
-    place: 'Кафе «Центр», ул. Образцовая, 5',
-    startsAt: nextWeekday(6, 16),
-    authorName: 'Демо-лидер',
-  },
-];
+type Row = {
+  id: string;
+  title: string;
+  description: string;
+  place: string;
+  starts_at: string;
+  author: { name: string } | { name: string }[] | null;
+};
 
-type Events = { events: YLEvent[]; addEvent: (e: Omit<YLEvent, 'id'>) => void };
+type Events = {
+  events: YLEvent[];
+  loading: boolean;
+  error: boolean;
+  refresh: () => Promise<void>;
+  addEvent: (e: NewEvent) => Promise<boolean>;
+};
+
 const Ctx = createContext<Events | null>(null);
 
+const DAY = 24 * 3600 * 1000;
+
 export function EventsProvider({ children }: { children: React.ReactNode }) {
-  const [events, setEvents] = useState<YLEvent[]>(seed);
+  const { user } = useAuth();
+  const uid = user?.id;
+  const [events, setEvents] = useState<YLEvent[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!uid) return;
+    setLoading(true);
+    // Показываем будущие мероприятия и те, что начались не более суток назад.
+    const since = new Date(Date.now() - DAY).toISOString();
+    const { data, error: err } = await supabase
+      .from('events')
+      .select('id,title,description,place,starts_at,author:profiles(name)')
+      .gte('starts_at', since)
+      .order('starts_at', { ascending: true });
+    if (err) {
+      setError(true);
+    } else {
+      setError(false);
+      setEvents(
+        ((data ?? []) as unknown as Row[]).map((r) => {
+          const author = Array.isArray(r.author) ? r.author[0] : r.author;
+          return {
+            id: r.id,
+            title: r.title,
+            description: r.description,
+            place: r.place,
+            startsAt: new Date(r.starts_at),
+            authorName: author?.name ?? '',
+          };
+        }),
+      );
+    }
+    setLoading(false);
+  }, [uid]);
+
+  // Загружаем мероприятия при входе, очищаем при выходе.
+  useEffect(() => {
+    if (uid) refresh();
+    else setEvents([]);
+  }, [uid, refresh]);
+
   const value = useMemo<Events>(
     () => ({
-      events: [...events].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()),
-      addEvent: (e) => setEvents((list) => [...list, { ...e, id: String(Date.now()) }]),
+      events,
+      loading,
+      error,
+      refresh,
+      addEvent: async (e) => {
+        if (!uid) return false;
+        const { error: err } = await supabase.from('events').insert({
+          title: e.title.trim(),
+          description: e.description.trim(),
+          place: e.place.trim(),
+          starts_at: e.startsAt.toISOString(),
+        });
+        if (err) return false;
+        await refresh();
+        return true;
+      },
     }),
-    [events],
+    [events, loading, error, refresh, uid],
   );
+
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

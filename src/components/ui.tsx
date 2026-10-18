@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { ComponentProps, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   StyleProp,
@@ -55,12 +56,14 @@ export function Button({
   onPress,
   variant = 'primary',
   icon,
+  loading = false,
   style,
 }: {
   title: string;
   onPress: () => void;
   variant?: Variant;
   icon?: IconName;
+  loading?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const c = usePalette();
@@ -72,6 +75,8 @@ export function Button({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title}
+      accessibilityState={{ busy: loading, disabled: loading }}
+      disabled={loading}
       onPress={onPress}
       style={({ pressed }) => [
         {
@@ -89,8 +94,14 @@ export function Button({
         pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
         style,
       ]}>
-      {icon ? <Ionicons name={icon} size={22} color={fg} /> : null}
-      <Text style={{ fontFamily: font.bold, fontSize: 16, color: fg }}>{title}</Text>
+      {loading ? (
+        <ActivityIndicator color={fg} />
+      ) : (
+        <>
+          {icon ? <Ionicons name={icon} size={22} color={fg} /> : null}
+          <Text style={{ fontFamily: font.bold, fontSize: 16, color: fg }}>{title}</Text>
+        </>
+      )}
     </Pressable>
   );
 }

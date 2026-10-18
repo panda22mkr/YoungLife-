@@ -19,15 +19,19 @@ export default function NewEvent() {
   const [description, setDescription] = useState('');
   const [place, setPlace] = useState('');
   const [when, setWhen] = useState('');
+  const [busy, setBusy] = useState(false);
 
   if (!user || !canCreateEvents(user)) return null;
 
-  const submit = () => {
-    if (!title || !place || !when) return Alert.alert(t('fillAll'));
+  const submit = async () => {
+    if (!title.trim() || !place.trim() || !when) return Alert.alert(t('fillAll'));
     const startsAt = parseDateTime(when);
     if (!startsAt) return Alert.alert(t('invalidDateTime'));
-    addEvent({ title, description, place, startsAt, authorName: user.name });
-    router.back();
+    setBusy(true);
+    const ok = await addEvent({ title, description, place, startsAt });
+    setBusy(false);
+    if (ok) router.back();
+    else Alert.alert(t('createError'));
   };
 
   return (
@@ -47,7 +51,7 @@ export default function NewEvent() {
           keyboardType="numbers-and-punctuation"
         />
         <View style={{ marginTop: space.sm }}>
-          <Button title={t('create')} onPress={submit} />
+          <Button title={t('create')} onPress={submit} loading={busy} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

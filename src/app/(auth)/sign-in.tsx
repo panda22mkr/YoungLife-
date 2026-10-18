@@ -14,9 +14,14 @@ export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const submit = () => {
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
     if (!email || !password) return Alert.alert(t('fillAll'));
-    if (!signIn(email, password)) Alert.alert(t('accountNotFound'));
+    setBusy(true);
+    const error = await signIn(email, password);
+    setBusy(false);
+    if (error) Alert.alert(t(error));
   };
 
   return (
@@ -56,7 +61,7 @@ export default function SignIn() {
         <Field label={t('password')} value={password} onChangeText={setPassword} secureTextEntry />
 
         <View style={{ gap: space.sm, marginTop: space.sm }}>
-          <Button title={t('signIn')} onPress={submit} />
+          <Button title={t('signIn')} onPress={submit} loading={busy} />
           <Button title={t('signUp')} variant="ghost" onPress={() => router.push('/sign-up')} />
         </View>
       </ScrollView>

@@ -17,6 +17,7 @@ export default function ProfileEdit() {
   const [name, setName] = useState(user?.name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [avatarUri, setAvatarUri] = useState<string | undefined>(user?.avatarUri);
+  const [busy, setBusy] = useState(false);
 
   if (!user) return null;
 
@@ -34,10 +35,13 @@ export default function ProfileEdit() {
     }
   };
 
-  const save = () => {
+  const save = async () => {
     if (!name.trim()) return Alert.alert(t('nameRequired'));
-    updateProfile({ name: name.trim(), bio: bio.trim(), avatarUri });
-    router.back();
+    setBusy(true);
+    const ok = await updateProfile({ name: name.trim().slice(0, 60), bio: bio.trim(), avatarUri });
+    setBusy(false);
+    if (ok) router.back();
+    else Alert.alert(t('saveError'));
   };
 
   return (
@@ -87,7 +91,7 @@ export default function ProfileEdit() {
           maxLength={200}
         />
         <View style={{ marginTop: space.sm }}>
-          <Button title={t('save')} onPress={save} />
+          <Button title={t('save')} onPress={save} loading={busy} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -12,7 +12,7 @@ import { font, radius, space, touch, usePalette } from '@/lib/theme';
 export default function EventsScreen() {
   const { t, lang } = useI18n();
   const { user } = useAuth();
-  const { events } = useEvents();
+  const { events, loading, error, refresh } = useEvents();
   const insets = useSafeAreaInsets();
   const c = usePalette();
   const canCreate = canCreateEvents(user);
@@ -22,6 +22,8 @@ export default function EventsScreen() {
       <FlatList
         data={events}
         keyExtractor={(e) => e.id}
+        refreshing={loading}
+        onRefresh={refresh}
         contentContainerStyle={{
           paddingHorizontal: space.screen,
           paddingTop: insets.top + space.lg,
@@ -29,7 +31,13 @@ export default function EventsScreen() {
           gap: space.sm + 4,
         }}
         ListHeaderComponent={<ScreenTitle title={t('eventsTitle')} subtitle={t('eventsHint')} />}
-        ListEmptyComponent={<EmptyState icon="calendar-outline" title={t('noEventsTitle')} hint={t('noEventsHint')} />}
+        ListEmptyComponent={
+          loading ? null : error ? (
+            <EmptyState icon="cloud-offline-outline" title={t('loadError')} hint={t('loadErrorHint')} />
+          ) : (
+            <EmptyState icon="calendar-outline" title={t('noEventsTitle')} hint={t('noEventsHint')} />
+          )
+        }
         renderItem={({ item }) => (
           <Pressable
             accessibilityRole="button"
