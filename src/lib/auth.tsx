@@ -10,7 +10,11 @@ export type User = {
   email: string;
   birthDate: Date;
   role: Role;
+  bio: string;
+  avatarUri?: string;
 };
+
+export type ProfilePatch = Partial<Pick<User, 'name' | 'bio' | 'avatarUri'>>;
 
 export function calcAge(birth: Date, now: Date = new Date()): number {
   let age = now.getFullYear() - birth.getFullYear();
@@ -47,6 +51,7 @@ type Auth = {
   signUp: (name: string, email: string, password: string, birthDate: Date) => void;
   signOut: () => void;
   setDemoRole: (role: Role) => void;
+  updateProfile: (patch: ProfilePatch) => void;
 };
 
 const Ctx = createContext<Auth | null>(null);
@@ -57,8 +62,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [accounts, setAccounts] = useState<Record<string, User>>({});
 
-  const value = useMemo<Auth>(
-    () => ({
+  const value = useMemo<Auth>(() => {
+    // Меняет текущего пользователя и его запись в «базе», чтобы изменения не терялись после выхода.
+    const change = (apply: (u: User) => User) => {
+      if (!user) return;
+      const next = apply(user);
+      setUser(next);
+      setAccounts((a) => ({ ...a, [next.email]: next }));
+    };
+
+    return {
       user,
       signIn: (email) => {
         const found = accounts[email.trim().toLowerCase()];
@@ -68,15 +81,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       signUp: (name, email, _password, birthDate) => {
         const key = email.trim().toLowerCase();
-        const u: User = { id: key, name: name.trim(), email: key, birthDate, role: 'guest' };
+        const u: User = { id: key, name: name.trim(), email: key, birthDate, role: 'guest', bio: '' };
         setAccounts((a) => ({ ...a, [key]: u }));
         setUser(u);
       },
       signOut: () => setUser(null),
-      setDemoRole: (role) => setUser((u) => (u ? { ...u, role } : u)),
-    }),
-    [user, accounts],
-  );
+      setDemoRole: (role) => change((u) => ({ ...u, role })),
+      updateProfile: (patch) => change((u) => ({ ...u, ...patch })),
+    };
+  }, [user, accounts]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

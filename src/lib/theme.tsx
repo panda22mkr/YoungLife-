@@ -1,4 +1,5 @@
 import { TextStyle, useColorScheme } from 'react-native';
+import { usePrefs } from './prefs';
 
 // Палитра YoungLife: тёмно-синий (navy) и зелёный на нейтральном фоне.
 // Светлая и тёмная темы переключаются автоматически по настройке телефона.
@@ -32,8 +33,16 @@ const dark = {
 
 export type Palette = typeof light;
 
+// Выбранная тема: «как в телефоне», светлая или тёмная (см. Настройки).
+export function useScheme(): 'light' | 'dark' {
+  const system = useColorScheme();
+  const { theme } = usePrefs();
+  if (theme === 'system') return system === 'dark' ? 'dark' : 'light';
+  return theme;
+}
+
 export function usePalette(): Palette {
-  return useColorScheme() === 'dark' ? dark : light;
+  return useScheme() === 'dark' ? dark : light;
 }
 
 // Фирменный тёмно-синий, одинаковый в обеих темах (плитка даты).

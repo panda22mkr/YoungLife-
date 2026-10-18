@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { ComponentProps, useState } from 'react';
 import {
+  Image,
   Pressable,
   StyleProp,
+  Switch,
   Text,
   TextInput,
   TextInputProps,
@@ -167,12 +169,12 @@ export function IconBadge({ name, size = 44 }: { name: IconName; size?: number }
   );
 }
 
-export function Chip({ label }: { label: string }) {
+export function Chip({ label, align = 'flex-start' }: { label: string; align?: 'flex-start' | 'center' }) {
   const c = usePalette();
   return (
     <View
       style={{
-        alignSelf: 'flex-start',
+        alignSelf: align,
         backgroundColor: c.greenSoft,
         borderRadius: 999,
         paddingHorizontal: 10,
@@ -258,6 +260,97 @@ export function WordMark() {
         YoungLife
       </Text>
       <View style={{ width: 44, height: 6, borderRadius: 3, backgroundColor: c.green, marginTop: 6 }} />
+    </View>
+  );
+}
+
+// Круглое фото профиля или инициалы, если фото нет.
+export function Avatar({ name, uri, size = 96 }: { name: string; uri?: string; size?: number }) {
+  const c = usePalette();
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+  const round = { width: size, height: size, borderRadius: size / 2 };
+
+  if (uri) {
+    return <Image source={{ uri }} accessibilityIgnoresInvertColors style={[round, { backgroundColor: c.track }]} />;
+  }
+  return (
+    <View style={[round, { backgroundColor: c.greenSoft, alignItems: 'center', justifyContent: 'center' }]}>
+      <Text style={{ fontFamily: font.extrabold, fontSize: size * 0.38, color: c.greenText }}>{initials}</Text>
+    </View>
+  );
+}
+
+// Круглая кнопка-иконка (например, шестерёнка настроек). Размер 48 для удобного нажатия.
+export function IconButton({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  onPress: () => void;
+}) {
+  const c = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => ({
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: c.surface,
+        borderWidth: 1,
+        borderColor: c.line,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: pressed ? 0.8 : 1,
+      })}>
+      <Ionicons name={icon} size={24} color={c.ink} />
+    </Pressable>
+  );
+}
+
+// Строка с переключателем (включить/выключить).
+export function SwitchRow({
+  icon,
+  title,
+  subtitle,
+  value,
+  onValueChange,
+}: {
+  icon: IconName;
+  title: string;
+  subtitle?: string;
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+}) {
+  const c = usePalette();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: touch }}>
+      <IconBadge name={icon} />
+      <View style={{ flex: 1 }}>
+        <Txt variant="strong">{title}</Txt>
+        {subtitle ? (
+          <Txt variant="small" tone="muted">
+            {subtitle}
+          </Txt>
+        ) : null}
+      </View>
+      <Switch
+        accessibilityLabel={title}
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: c.track, true: c.green }}
+        thumbColor="#FFFFFF"
+      />
     </View>
   );
 }

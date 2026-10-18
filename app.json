@@ -25,7 +25,13 @@
     },
     "scheme": "younglife",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Приложению нужен доступ к фото, чтобы вы могли выбрать фото профиля."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
