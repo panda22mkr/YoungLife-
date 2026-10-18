@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Linking, ScrollView, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { Linking, ScrollView, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, DateTile, IconBadge, Txt } from '@/components/ui';
+import { canDirectMessage, useAuth } from '@/lib/auth';
 import { fullText } from '@/lib/dates';
 import { useEvents } from '@/lib/events';
 import { useI18n } from '@/lib/i18n';
@@ -11,11 +12,13 @@ import { space, usePalette } from '@/lib/theme';
 export default function EventDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { events } = useEvents();
+  const { user } = useAuth();
   const { t, lang } = useI18n();
   const insets = useSafeAreaInsets();
   const c = usePalette();
   const event = events.find((e) => e.id === id);
   if (!event) return null;
+  const canWriteAuthor = !!user && canDirectMessage(user) && event.authorId !== user.id;
 
   const openMaps = () =>
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.place)}`);
@@ -48,8 +51,24 @@ export default function EventDetails() {
           borderTopWidth: 1,
           borderTopColor: c.line,
         }}>
-        <Button title={t('writeAuthor')} icon="chatbubble-outline" onPress={() => Alert.alert(t('chatSoon'))} />
-        <Button title={t('openInMaps')} variant="secondary" icon="map-outline" onPress={openMaps} />
+        <Button
+          title={t('eventChat')}
+          icon="chatbubbles-outline"
+          onPress={() => router.push({ pathname: '/chat/[id]', params: { id: event.id } })}
+        />
+        {canWriteAuthor ? (
+          <Button
+            title={t('writeAuthor')}
+            variant="secondary"
+            icon="chatbubble-outline"
+            onPress={() => router.push({ pathname: '/dm/[userId]', params: { userId: event.authorId } })}
+          />
+        ) : user && event.authorId !== user.id ? (
+          <Txt variant="small" tone="muted" style={{ textAlign: 'center' }}>
+            {t('groupOnly')}
+          </Txt>
+        ) : null}
+        <Button title={t('openInMaps')} variant="ghost" icon="map-outline" onPress={openMaps} />
       </View>
     </View>
   );
