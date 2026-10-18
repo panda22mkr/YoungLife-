@@ -68,7 +68,10 @@ export function ChatView({
   const askDelete = (m: Message) =>
     Alert.alert(t('deleteMessage'), t('deleteMessageAsk'), [
       { text: t('cancel'), style: 'cancel' },
-      { text: t('delete'), style: 'destructive', onPress: () => void chat.remove(m.id) },
+      { text: t('delete'), style: 'destructive', onPress: async () => {
+          if (!(await chat.remove(m.id))) Alert.alert(t('deleteError'));
+        },
+      },
     ]);
 
   return (
@@ -126,7 +129,7 @@ export function ChatView({
                       {item.senderName || t('unknownUser')}
                     </Txt>
                   ) : null}
-                  <Text selectable style={{ fontFamily: font.medium, fontSize: 16, lineHeight: 22, color: mine ? c.onGreen : c.ink }}>
+                  <Text style={{ fontFamily: font.medium, fontSize: 16, lineHeight: 22, color: mine ? c.onGreen : c.ink }}>
                     {item.body}
                   </Text>
                   <Text
