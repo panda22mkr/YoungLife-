@@ -180,7 +180,11 @@ export default function MapScreen() {
                     cw={cw}
                     ch={ch}
                     color={statusColor(p.status)}
-                    onTap={() => openEdit(p)}
+                    onTap={() => {
+                      setScrollOn(true);
+                      openEdit(p);
+                    }}
+                    onCancel={() => setScrollOn(true)}
                     onDragStart={() => setScrollOn(false)}
                     onDrag={(x, y) => setDrag({ id: p.id, x, y })}
                     onDrop={(x, y) => {
@@ -248,6 +252,7 @@ function PlaceNode({
   ch,
   color,
   onTap,
+  onCancel,
   onDragStart,
   onDrag,
   onDrop,
@@ -259,13 +264,14 @@ function PlaceNode({
   ch: number;
   color: string;
   onTap: () => void;
+  onCancel: () => void;
   onDragStart: () => void;
   onDrag: (x: number, y: number) => void;
   onDrop: (x: number, y: number) => void;
 }) {
   const c = usePalette();
-  const props = useRef({ place, cw, ch, onTap, onDragStart, onDrag, onDrop });
-  props.current = { place, cw, ch, onTap, onDragStart, onDrag, onDrop };
+  const props = useRef({ place, cw, ch, onTap, onCancel, onDragStart, onDrag, onDrop });
+  props.current = { place, cw, ch, onTap, onCancel, onDragStart, onDrag, onDrop };
   const start = useRef({ x: 0, y: 0, moved: false, last: { x: 0, y: 0 } }).current;
 
   const pan = useRef(
@@ -279,14 +285,13 @@ function PlaceNode({
         start.y = p.place.y;
         start.moved = false;
         start.last = { x: p.place.x, y: p.place.y };
+        // Страница замирает сразу при касании кружка, а не после первого сдвига.
+        p.onDragStart();
       },
       onPanResponderMove: (_e, g) => {
         const p = props.current;
         if (!start.moved && Math.hypot(g.dx, g.dy) < 6) return;
-        if (!start.moved) {
-          start.moved = true;
-          p.onDragStart();
-        }
+        start.moved = true;
         const nx = Math.max(0.1, Math.min(0.9, start.x + g.dx / p.cw));
         const ny = Math.max(0.07, Math.min(0.93, start.y + g.dy / p.ch));
         start.last = { x: nx, y: ny };
@@ -299,6 +304,7 @@ function PlaceNode({
       },
       onPanResponderTerminate: () => {
         if (start.moved) props.current.onDrop(start.last.x, start.last.y);
+        else props.current.onCancel();
       },
     }),
   ).current;

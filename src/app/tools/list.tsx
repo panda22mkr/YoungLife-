@@ -36,7 +36,6 @@ const CARD_H = 52;
 const HEAD_H = 52;
 const COL_PAD = 10;
 const AREA_TOP = COL_PAD + HEAD_H; // где начинаются карточки внутри столбца
-const EDGE = 56; // зона у края экрана, где включается автопрокрутка
 
 type Target = { col: PrayerCol; index: number };
 type Drag = { id: string; name: string; from: Target; target: Target };
@@ -64,27 +63,29 @@ export default function ListScreen() {
   const dragRef = useRef<Drag | null>(null);
   const itemsRef = useRef(list.items);
   itemsRef.current = list.items;
+  const boardW = PAD * 2 + PRAYER_COLS.length * colW + (PRAYER_COLS.length - 1) * GAP;
+  // Пока имя несут, весь стол с пятью столбцами уменьшается и целиком помещается на экран.
+  // Страница при этом стоит на месте: ничего не прокручивается, можно положить имя в любой столбец.
+  const fit = Math.min(1, (W - 12) / boardW);
   const geo = useRef({
-    bx0: 0, by0: 0, sx0: 0, sy0: 0, sx: 0, sy: 0,
-    rootX: 0, rootY: 0, rootH: 0, px: 0, py: 0, ready: false,
-    timer: null as ReturnType<typeof setInterval> | null,
+    by0: 0, rootX: 0, rootY: 0, px: 0, py: 0, ready: false, fit: 1,
   }).current;
+  geo.fit = fit;
   const moveRef = useRef(list.move);
   moveRef.current = list.move;
 
   const colItems = (col: PrayerCol, skipId?: string) =>
     itemsRef.current.filter((p) => p.col === col && p.id !== skipId);
 
-  // Куда сейчас «смотрит» палец: столбец и место в нём.
+  // Куда сейчас «смотрит» палец: столбец и место в нём (с учётом уменьшения стола).
   const computeTarget = useCallback(() => {
     const d = dragRef.current;
     if (!d || !geo.ready) return;
-    const bx = geo.bx0 + (geo.sx0 - geo.sx);
-    const by = geo.by0 + (geo.sy0 - geo.sy);
-    const ci = clamp(Math.floor((geo.px - bx - PAD) / (colW + GAP)), 0, PRAYER_COLS.length - 1);
+    const sc = geo.fit;
+    const ci = clamp(Math.floor((geo.px - PAD * sc) / ((colW + GAP) * sc)), 0, PRAYER_COLS.length - 1);
     const col = PRAYER_COLS[ci];
     const n = colItems(col, d.id).length;
-    const index = clamp(Math.floor((geo.py - by - AREA_TOP) / ROW), 0, n);
+    const index = clamp(Math.floor((geo.py - geo.by0 - AREA_TOP * sc) / (ROW * sc)), 0, n);
     if (d.target.col === col && d.target.index === index) return;
     const next = { ...d, target: { col, index } };
     dragRef.current = next;
@@ -96,12 +97,6 @@ export default function ListScreen() {
     ghost.setValue({ x: geo.px - geo.rootX - colW / 2, y: geo.py - geo.rootY - CARD_H / 2 });
   };
 
-  const stopTimer = () => {
-    if (geo.timer) clearInterval(geo.timer);
-    geo.timer = null;
-  };
-  useEffect(() => stopTimer, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const onDragStart = (p: PrayerPerson, pageX: number, pageY: number) => {
     const from: Target = { col: p.col, index: colItems(p.col, p.id).filter((q) => q.position < p.position).length };
     const d: Drag = { id: p.id, name: p.name, from, target: from };
@@ -112,47 +107,23 @@ export default function ListScreen() {
     let got = 0;
     const done = () => {
       if (++got === 2) {
-        geo.sx0 = geo.sx;
-        geo.sy0 = geo.sy;
         geo.ready = true;
         placeGhost();
         computeTarget();
       }
     };
-    rootRef.current?.measureInWindow((x, y, _w, h) => {
+    rootRef.current?.measureInWindow((x, y) => {
       geo.rootX = x;
       geo.rootY = y;
-      geo.rootH = h;
       done();
     });
-    boardRef.current?.measureInWindow((x, y) => {
-      geo.bx0 = x;
+    // Верх стола на экране не меняется при уменьшении, поэтому измеряем его один раз.
+    boardRef.current?.measureInWindow((_x, y) => {
       geo.by0 = y;
       done();
     });
+    hRef.current?.scrollTo({ x: 0, animated: false });
     setDrag(d);
-    stopTimer();
-    // Если палец у края экрана, список сам прокручивается.
-    geo.timer = setInterval(() => {
-      if (!geo.ready) return;
-      const maxX = PAD * 2 + PRAYER_COLS.length * colW + (PRAYER_COLS.length - 1) * GAP - W;
-      let moved = false;
-      if (geo.px < EDGE && geo.sx > 0) {
-        hRef.current?.scrollTo({ x: Math.max(0, geo.sx - 14), animated: false });
-        moved = true;
-      } else if (geo.px > W - EDGE && geo.sx < maxX) {
-        hRef.current?.scrollTo({ x: Math.min(maxX, geo.sx + 14), animated: false });
-        moved = true;
-      }
-      if (geo.py < geo.rootY + EDGE + 40) {
-        vRef.current?.scrollTo({ y: Math.max(0, geo.sy - 14), animated: false });
-        moved = true;
-      } else if (geo.py > geo.rootY + geo.rootH - EDGE - 20) {
-        vRef.current?.scrollTo({ y: geo.sy + 14, animated: false });
-        moved = true;
-      }
-      if (moved) computeTarget();
-    }, 16);
   };
 
   const onDragMove = (x: number, y: number) => {
@@ -164,11 +135,16 @@ export default function ListScreen() {
   };
 
   const onDragEnd = () => {
-    stopTimer();
     const d = dragRef.current;
     dragRef.current = null;
     setDrag(null);
     if (!d || !geo.ready) return;
+    // Стол возвращается в обычный размер: показываем столбец, куда положили имя.
+    const ci = PRAYER_COLS.indexOf(d.target.col);
+    setTimeout(
+      () => hRef.current?.scrollTo({ x: Math.max(0, PAD + ci * (colW + GAP) - (W - colW) / 2), animated: true }),
+      60,
+    );
     const same = d.target.col === d.from.col && d.target.index === d.from.index;
     if (!same) {
       moveRef.current(d.id, d.target.col, d.target.index).then((ok) => {
@@ -219,10 +195,6 @@ export default function ListScreen() {
       <ScrollView
         ref={vRef}
         scrollEnabled={!drag}
-        scrollEventThrottle={16}
-        onScroll={(e) => {
-          geo.sy = e.nativeEvent.contentOffset.y;
-        }}
         contentContainerStyle={{ paddingTop: space.md, paddingBottom: space.xl * 2 }}>
         <View style={{ paddingHorizontal: PAD }}>
           <ScreenTitle title={t('list')} subtitle={t('listHint')} />
@@ -237,38 +209,64 @@ export default function ListScreen() {
             ref={hRef}
             horizontal
             scrollEnabled={!drag}
-            scrollEventThrottle={16}
-            showsHorizontalScrollIndicator={false}
-            onScroll={(e) => {
-              geo.sx = e.nativeEvent.contentOffset.x;
-            }}>
-            <View ref={boardRef} collapsable={false} style={{ flexDirection: 'row', paddingHorizontal: PAD, gap: GAP }}>
+            showsHorizontalScrollIndicator={false}>
+            <View style={{ width: drag ? W : boardW, height: colH }}>
+            <View
+              ref={boardRef}
+              collapsable={false}
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                width: boardW,
+                flexDirection: 'row',
+                paddingHorizontal: PAD,
+                gap: GAP,
+                transformOrigin: 'top left',
+                transform: drag ? [{ scale: fit }] : [],
+              }}>
               {PRAYER_COLS.map((col) => {
                 const all = list.byCol(col);
-                const others = all.filter((p) => p.id !== drag?.id);
                 const hover = drag?.target.col === col;
-                const dragged = all.find((p) => p.id === drag?.id);
-                const rows: React.ReactNode[] = others.map((p) => (
-                  <PersonCard key={p.id} person={p} onPress={() => openEdit(p)} onStart={onDragStart} onMove={onDragMove} onEnd={onDragEnd} />
-                ));
-                if (hover && drag) {
-                  rows.splice(
-                    clamp(drag.target.index, 0, others.length),
-                    0,
-                    <View
-                      key="placeholder"
-                      style={{
-                        height: CARD_H,
-                        marginBottom: ROW - CARD_H,
-                        borderRadius: radius.input,
-                        borderWidth: 2,
-                        borderStyle: 'dashed',
-                        borderColor: c.green,
-                        backgroundColor: c.greenSoft,
-                      }}
+                // Несомое имя остаётся на своём месте в исходном столбце (скрытым), чтобы касание не прерывалось.
+                // Метка «сюда» вставляется перед N-м из остальных имён.
+                const rows: React.ReactNode[] = [];
+                let seen = 0;
+                let placed = false;
+                const placeholder = (
+                  <View
+                    key="placeholder"
+                    style={{
+                      height: CARD_H,
+                      marginBottom: ROW - CARD_H,
+                      borderRadius: radius.input,
+                      borderWidth: 2,
+                      borderStyle: 'dashed',
+                      borderColor: c.green,
+                      backgroundColor: c.greenSoft,
+                    }}
+                  />
+                );
+                for (const p of all) {
+                  const carried = p.id === drag?.id;
+                  if (!carried && hover && drag && !placed && seen === drag.target.index) {
+                    rows.push(placeholder);
+                    placed = true;
+                  }
+                  if (!carried) seen++;
+                  rows.push(
+                    <PersonCard
+                      key={p.id}
+                      person={p}
+                      hidden={carried}
+                      onPress={() => openEdit(p)}
+                      onStart={onDragStart}
+                      onMove={onDragMove}
+                      onEnd={onDragEnd}
                     />,
                   );
                 }
+                if (hover && drag && !placed) rows.push(placeholder);
                 return (
                   <View
                     key={col}
@@ -290,12 +288,6 @@ export default function ListScreen() {
                       </Txt>
                     </View>
                     {rows}
-                    {/* Имя, которое сейчас несут, остаётся смонтированным (скрытым), чтобы жест не прервался. */}
-                    {dragged ? (
-                      <View style={{ height: 0, overflow: 'hidden', opacity: 0 }}>
-                        <PersonCard person={dragged} onPress={() => {}} onStart={onDragStart} onMove={onDragMove} onEnd={onDragEnd} />
-                      </View>
-                    ) : null}
                     {all.length === 0 && !hover ? (
                       <Txt variant="small" tone="muted" style={{ textAlign: 'center', marginVertical: space.sm }}>
                         {t('emptyColumn')}
@@ -324,6 +316,7 @@ export default function ListScreen() {
                   </View>
                 );
               })}
+            </View>
             </View>
           </ScrollView>
         )}
@@ -408,12 +401,14 @@ export default function ListScreen() {
 // Карточка имени. Ручка слева (⋮⋮) нужна для перетаскивания, остальная карточка открывает имя.
 function PersonCard({
   person,
+  hidden = false,
   onPress,
   onStart,
   onMove,
   onEnd,
 }: {
   person: PrayerPerson;
+  hidden?: boolean;
   onPress: () => void;
   onStart: (p: PrayerPerson, x: number, y: number) => void;
   onMove: (x: number, y: number) => void;
@@ -439,11 +434,13 @@ function PersonCard({
   return (
     <View
       style={{
-        height: CARD_H,
-        marginBottom: ROW - CARD_H,
+        height: hidden ? 0 : CARD_H,
+        marginBottom: hidden ? 0 : ROW - CARD_H,
+        opacity: hidden ? 0 : 1,
+        overflow: 'hidden',
         borderRadius: radius.input,
         backgroundColor: c.surface,
-        borderWidth: 1,
+        borderWidth: hidden ? 0 : 1,
         borderColor: c.line,
         flexDirection: 'row',
         alignItems: 'center',

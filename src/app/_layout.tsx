@@ -6,7 +6,9 @@ import {
   Onest_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/onest';
-import { Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import { Pressable } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -17,6 +19,29 @@ import { PrefsProvider } from '@/lib/prefs';
 import { font, usePalette, useScheme } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync();
+
+// Крупная кнопка «назад» для инструментов: всегда закрывает инструмент.
+function ToolBack() {
+  const router = useRouter();
+  const c = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Back"
+      hitSlop={16}
+      onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/tools'))}
+      style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -8 }}>
+      <Ionicons name="chevron-back" size={28} color={c.ink} />
+    </Pressable>
+  );
+}
+
+const toolOptions = {
+  title: '',
+  headerBackVisible: false,
+  headerLeft: () => <ToolBack />,
+  gestureEnabled: false, // свайп от края не мешает перетаскиванию
+} as const;
 
 function Routes() {
   const { user, loading } = useAuth();
@@ -50,9 +75,9 @@ function Routes() {
           <Stack.Screen name="event/[id]" options={{ title: '' }} />
           <Stack.Screen name="event/new" options={{ title: '' }} />
           <Stack.Screen name="chat/[id]" options={{ title: '' }} />
-          <Stack.Screen name="tools/tree" options={{ title: '' }} />
-          <Stack.Screen name="tools/list" options={{ title: '' }} />
-          <Stack.Screen name="tools/map" options={{ title: '' }} />
+          <Stack.Screen name="tools/tree" options={toolOptions} />
+          <Stack.Screen name="tools/list" options={toolOptions} />
+          <Stack.Screen name="tools/map" options={toolOptions} />
           <Stack.Screen name="dm/[userId]" options={{ title: '' }} />
           <Stack.Screen name="settings" options={{ title: '' }} />
           <Stack.Screen name="profile-edit" options={{ title: '' }} />
