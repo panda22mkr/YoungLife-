@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Linking, ScrollView, View } from 'react-native';
+import { Image, Linking, ScrollView, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, DateTile, IconBadge, Txt } from '@/components/ui';
@@ -26,6 +26,13 @@ export default function EventDetails() {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: space.screen, gap: space.lg }}>
+        {event.imageUrl ? (
+          <Image
+            source={{ uri: event.imageUrl }}
+            accessibilityIgnoresInvertColors
+            style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: 16, backgroundColor: c.track }}
+          />
+        ) : null}
         <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
           <DateTile date={event.startsAt} lang={lang} large />
           <Txt variant="title" style={{ flex: 1 }}>

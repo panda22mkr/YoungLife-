@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Image, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, DateTile, EmptyState, ScreenTitle, Txt } from '@/components/ui';
 import { canCreateEvents, useAuth } from '@/lib/auth';
@@ -52,7 +52,15 @@ export default function EventsScreen() {
                 <Meta icon="time-outline" text={timeText(item.startsAt)} />
                 <Meta icon="location-outline" text={item.place} />
               </View>
-              <Ionicons name="chevron-forward" size={20} color={c.muted} />
+              {item.imageUrl ? (
+                <Image
+                  source={{ uri: item.imageUrl }}
+                  accessibilityIgnoresInvertColors
+                  style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: c.track }}
+                />
+              ) : (
+                <Ionicons name="chevron-forward" size={20} color={c.muted} />
+              )}
             </Card>
           </Pressable>
         )}
