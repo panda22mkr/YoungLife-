@@ -109,7 +109,7 @@ export default function ChatsScreen() {
       renderItem={({ item }) => (
         <Row
           onPress={() => router.push({ pathname: '/dm/[userId]', params: { userId: item.userId } })}
-          left={<Avatar name={item.name || '?'} size={48} />}
+          left={<Avatar name={item.name || '?'} uri={item.avatar} size={48} />}
           title={item.name || t('unknownUser')}
           subtitle={`${item.lastMine ? `${t('you')}: ` : ''}${item.lastBody}`}
           meta={timeText(item.lastAt)}

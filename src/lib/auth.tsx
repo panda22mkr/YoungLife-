@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import * as ImageManipulator from 'expo-image-manipulator';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { TKey } from './i18n';
 import { supabase } from './supabase';
@@ -14,11 +15,11 @@ export type User = {
   birthDate: Date;
   role: Role;
   bio: string;
-  // Фото пока хранится только на телефоне (загрузка в облако будет следующим этапом).
+  // Ссылка на фото в облаке (Supabase Storage).
   avatarUri?: string;
 };
 
-type ProfileData = Omit<User, 'avatarUri'>;
+type ProfileData = User;
 export type ProfilePatch = Partial<Pick<User, 'name' | 'bio' | 'avatarUri'>>;
 
 export function calcAge(birth: Date, now: Date = new Date()): number {
@@ -84,14 +85,14 @@ type Auth = {
 
 const Ctx = createContext<Auth | null>(null);
 
-type ProfileRow = { id: string; name: string; bio: string; role: Role };
+type ProfileRow = { id: string; name: string; bio: string; role: Role; avatar_url: string | null };
 
 async function fetchProfile(
   uid: string,
   email: string,
 ): Promise<{ profile?: ProfileData; missing?: boolean; failed?: boolean }> {
   const [p, priv] = await Promise.all([
-    supabase.from('profiles').select('id,name,bio,role').eq('id', uid).maybeSingle(),
+    supabase.from('profiles').select('id,name,bio,role,avatar_url').eq('id', uid).maybeSingle(),
     supabase.from('profile_private').select('birth_date').eq('id', uid).maybeSingle(),
   ]);
   if (p.error || priv.error) return { failed: true };
@@ -99,14 +100,42 @@ async function fetchProfile(
   const birth = (priv.data as { birth_date: string } | null)?.birth_date;
   if (!row || !birth) return { missing: true };
   return {
-    profile: { id: row.id, name: row.name, bio: row.bio, role: row.role, email, birthDate: fromIsoDate(birth) },
+    profile: {
+      id: row.id,
+      name: row.name,
+      bio: row.bio,
+      role: row.role,
+      email,
+      birthDate: fromIsoDate(birth),
+      avatarUri: row.avatar_url ?? undefined,
+    },
   };
+}
+
+// Сжимает фото до 512x512 и загружает в облако; возвращает ссылку (или null при ошибке).
+async function uploadAvatar(uid: string, localUri: string): Promise<string | null> {
+  try {
+    const small = await ImageManipulator.manipulateAsync(localUri, [{ resize: { width: 512, height: 512 } }], {
+      compress: 0.7,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
+    const bytes = await (await fetch(small.uri)).arrayBuffer();
+    const path = `${uid}/avatar.jpg`;
+    const { error } = await supabase.storage.from('avatars').upload(path, bytes, {
+      contentType: 'image/jpeg',
+      upsert: true,
+    });
+    if (error) return null;
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    return `${data.publicUrl}?v=${Date.now()}`; // v= чтобы новое фото сразу заменило старое в кэше
+  } catch {
+    return null;
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [avatars, setAvatars] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0);
 
@@ -150,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [uid, email, reload]);
 
   const value = useMemo<Auth>(() => {
-    const user: User | null = profile && profile.id === uid ? { ...profile, avatarUri: avatars[profile.id] } : null;
+    const user: User | null = profile && profile.id === uid ? profile : null;
 
     return {
       user,
@@ -182,16 +211,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       updateProfile: async (patch) => {
         if (!profile) return false;
-        const { avatarUri, ...fields } = patch;
-        if ('avatarUri' in patch) setAvatars((a) => ({ ...a, [profile.id]: avatarUri }));
-        if (fields.name === undefined && fields.bio === undefined) return true;
+        const fields: Record<string, string | null> = {};
+        if (patch.name !== undefined) fields.name = patch.name;
+        if (patch.bio !== undefined) fields.bio = patch.bio;
+        let nextAvatar: string | undefined = profile.avatarUri;
+        if ('avatarUri' in patch && patch.avatarUri !== profile.avatarUri) {
+          if (!patch.avatarUri) {
+            fields.avatar_url = null;
+            nextAvatar = undefined;
+          } else {
+            const url = await uploadAvatar(profile.id, patch.avatarUri);
+            if (!url) return false;
+            fields.avatar_url = url;
+            nextAvatar = url;
+          }
+        }
+        if (Object.keys(fields).length === 0) return true;
         const { error } = await supabase.from('profiles').update(fields).eq('id', profile.id);
         if (error) return false;
-        setProfile((p) => (p ? { ...p, ...fields } : p));
+        setProfile((p) => (p ? { ...p, name: patch.name ?? p.name, bio: patch.bio ?? p.bio, avatarUri: nextAvatar } : p));
         return true;
       },
     };
-  }, [profile, uid, avatars, loading]);
+  }, [profile, uid, loading]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

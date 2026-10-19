@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { EmptyState, Txt } from '@/components/ui';
+import { Avatar, EmptyState, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import type { Message, SendResult } from '@/lib/chat';
 import { fullText, timeText } from '@/lib/dates';
@@ -106,14 +106,17 @@ export function ChatView({
             const mine = item.senderId === user?.id;
             const deletable = mine || canDeleteAny;
             return (
-              <View style={{ alignItems: mine ? 'flex-end' : 'flex-start' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, justifyContent: mine ? 'flex-end' : 'flex-start' }}>
+                {showNames && !mine ? (
+                  <Avatar name={item.senderName || '?'} uri={item.senderAvatar} size={32} />
+                ) : null}
                 <Pressable
                   accessibilityRole="text"
                   accessibilityHint={deletable ? t('deleteMessage') : undefined}
                   onLongPress={deletable ? () => askDelete(item) : undefined}
                   delayLongPress={350}
                   style={{
-                    maxWidth: '82%',
+                    maxWidth: '78%',
                     borderRadius: radius.card,
                     borderBottomRightRadius: mine ? 6 : radius.card,
                     borderBottomLeftRadius: mine ? radius.card : 6,

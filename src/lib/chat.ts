@@ -7,6 +7,7 @@ export type Message = {
   id: string;
   senderId: string;
   senderName: string;
+  senderAvatar?: string;
   body: string;
   createdAt: Date;
 };
@@ -22,17 +23,18 @@ type EventRow = {
   sender_id: string;
   body: string;
   created_at: string;
-  sender: { name: string } | { name: string }[] | null;
+  sender: { name: string; avatar_url: string | null } | { name: string; avatar_url: string | null }[] | null;
 };
 
 type DirectRow = { id: string; sender_id: string; recipient_id: string; body: string; created_at: string };
 
-const nameOf = (s: EventRow['sender']) => (Array.isArray(s) ? s[0]?.name : s?.name) ?? '';
+const senderOf = (s: EventRow['sender']) => (Array.isArray(s) ? s[0] : s) ?? null;
 
 const fromEventRow = (r: EventRow): Message => ({
   id: r.id,
   senderId: r.sender_id,
-  senderName: nameOf(r.sender),
+  senderName: senderOf(r.sender)?.name ?? '',
+  senderAvatar: senderOf(r.sender)?.avatar_url ?? undefined,
   body: r.body,
   createdAt: new Date(r.created_at),
 });
@@ -77,7 +79,7 @@ export function useEventChat(eventId: string | undefined): Chat {
   const [error, setError] = useState(false);
   const alive = useRef(true);
 
-  const select = 'id,sender_id,body,created_at,sender:profiles(name)';
+  const select = 'id,sender_id,body,created_at,sender:profiles(name,avatar_url)';
 
   const refresh = useCallback(async () => {
     if (!eventId || !uid) return;
@@ -263,7 +265,7 @@ export function useDirectChat(otherId: string | undefined): Chat {
 
 // ---------- Список личных переписок ----------
 
-export type Thread = { userId: string; name: string; lastBody: string; lastAt: Date; lastMine: boolean };
+export type Thread = { userId: string; name: string; avatar?: string; lastBody: string; lastAt: Date; lastMine: boolean };
 
 export function useDirectThreads(): {
   threads: Thread[];
@@ -298,10 +300,11 @@ export function useDirectThreads(): {
       if (!latest.has(other)) latest.set(other, r);
     }
     const ids = [...latest.keys()];
-    const names = new Map<string, string>();
+    const names = new Map<string, { name: string; avatar?: string }>();
     if (ids.length > 0) {
-      const { data: profs } = await supabase.from('profiles').select('id,name').in('id', ids);
-      for (const p of (profs ?? []) as { id: string; name: string }[]) names.set(p.id, p.name);
+      const { data: profs } = await supabase.from('profiles').select('id,name,avatar_url').in('id', ids);
+      for (const p of (profs ?? []) as { id: string; name: string; avatar_url: string | null }[])
+        names.set(p.id, { name: p.name, avatar: p.avatar_url ?? undefined });
     }
     if (!alive.current) return;
     setError(false);
@@ -310,7 +313,8 @@ export function useDirectThreads(): {
         const r = latest.get(id)!;
         return {
           userId: id,
-          name: names.get(id) ?? '',
+          name: names.get(id)?.name ?? '',
+          avatar: names.get(id)?.avatar,
           lastBody: r.body,
           lastAt: new Date(r.created_at),
           lastMine: r.sender_id === uid,
