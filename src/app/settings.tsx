@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
-import { Alert, ScrollView, View } from 'react-native';
+import { router } from 'expo-router';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, IconBadge, ScreenTitle, Segmented, SwitchRow, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
@@ -62,15 +63,14 @@ export default function SettingsScreen() {
         />
       </Card>
 
-      <Card style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
-        <IconBadge name="heart-outline" />
-        <View style={{ flex: 1 }}>
-          <Txt variant="strong">{t('donate')}</Txt>
-          <Txt variant="small" tone="muted">
-            {t('donateSoon')}
-          </Txt>
-        </View>
-      </Card>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/donate')}>
+        <Card style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
+          <IconBadge name="heart-outline" />
+          <View style={{ flex: 1 }}>
+            <Txt variant="strong">{t('donate')}</Txt>
+          </View>
+        </Card>
+      </Pressable>
 
       <Button
         title={t('signOut')}

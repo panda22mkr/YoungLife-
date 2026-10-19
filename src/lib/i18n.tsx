@@ -122,6 +122,11 @@ const dict = {
     signOut: 'Выйти',
     donate: 'Поддержать приложение',
     donateSoon: 'Пожертвования появятся позже',
+    donateTitle: 'Приложение живёт на пожертвования',
+    donateText:
+      'YoungLife-приложение некоммерческое и бесплатное для всех. Ваша помощь идёт только на его работу: серверы, хранение фото и развитие.',
+    donateButton: 'Поддержать',
+    donateNote: 'Пожертвование добровольное и ни на что не влияет в приложении.',
     age: 'Возраст',
     onlyLeaders: 'Этот раздел доступен только лидерам',
     years: 'лет',
@@ -278,6 +283,11 @@ const dict = {
     signOut: 'Sign out',
     donate: 'Support the app',
     donateSoon: 'Donations will be available later',
+    donateTitle: 'The app runs on donations',
+    donateText:
+      'The YoungLife app is non-profit and free for everyone. Your help goes only to keeping it running: servers, photo storage and development.',
+    donateButton: 'Support',
+    donateNote: 'Donating is voluntary and changes nothing inside the app.',
     age: 'Age',
     onlyLeaders: 'This section is for leaders only',
     years: 'years',

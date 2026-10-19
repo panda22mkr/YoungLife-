@@ -80,6 +80,7 @@ function Routes() {
           <Stack.Screen name="tools/map" options={toolOptions} />
           <Stack.Screen name="dm/[userId]" options={{ title: '' }} />
           <Stack.Screen name="settings" options={{ title: '' }} />
+          <Stack.Screen name="donate" options={{ title: '' }} />
           <Stack.Screen name="profile-edit" options={{ title: '' }} />
         </Stack.Protected>
       </Stack>
