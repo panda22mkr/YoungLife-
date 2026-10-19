@@ -162,6 +162,10 @@ const dict = {
     saveError: 'Не удалось сохранить. Проверьте интернет и попробуйте снова.',
     loadError: 'Не удалось загрузить мероприятия',
     loadErrorHint: 'Проверьте интернет и потяните вниз, чтобы обновить',
+    editEvent: 'Редактировать мероприятие',
+    deleteEvent: 'Удалить мероприятие',
+    deleteEventAsk: 'Мероприятие и его чат будут удалены. Это нельзя отменить.',
+    eventDeleteError: 'Не удалось удалить. Проверьте интернет и попробуйте снова.',
     createError: 'Не удалось создать мероприятие. Проверьте интернет и попробуйте снова.',
   },
   en: {
@@ -323,6 +327,10 @@ const dict = {
     saveError: 'Could not save. Check your internet and try again.',
     loadError: 'Could not load events',
     loadErrorHint: 'Check your internet and pull down to refresh',
+    editEvent: 'Edit event',
+    deleteEvent: 'Delete event',
+    deleteEventAsk: 'The event and its chat will be deleted. This cannot be undone.',
+    eventDeleteError: 'Could not delete. Check your internet and try again.',
     createError: 'Could not create the event. Check your internet and try again.',
   },
 } as const;

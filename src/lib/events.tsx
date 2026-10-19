@@ -33,6 +33,9 @@ type Events = {
   error: boolean;
   refresh: () => Promise<void>;
   addEvent: (e: NewEvent) => Promise<boolean>;
+  // image: 'keep' — не трогать обложку, 'remove' — убрать, иначе путь к новому фото на телефоне.
+  updateEvent: (id: string, e: Omit<NewEvent, 'imageUri'>, image: 'keep' | 'remove' | { uri: string }) => Promise<boolean>;
+  deleteEvent: (id: string) => Promise<boolean>;
 };
 
 const Ctx = createContext<Events | null>(null);
@@ -54,6 +57,12 @@ async function uploadEventPhoto(uid: string, localUri: string): Promise<string |
   } catch {
     return null;
   }
+}
+
+// Удаляет файл обложки из облака (ошибки не важны: это только уборка).
+async function removeEventPhoto(url?: string) {
+  const m = url && /\/event-photos\/([^?]+)/.exec(url);
+  if (m) await supabase.storage.from('event-photos').remove([decodeURIComponent(m[1])]).catch(() => {});
 }
 
 export function EventsProvider({ children }: { children: React.ReactNode }) {
@@ -123,6 +132,35 @@ export function EventsProvider({ children }: { children: React.ReactNode }) {
           starts_at: e.startsAt.toISOString(),
         });
         if (err) return false;
+        await refresh();
+        return true;
+      },
+      updateEvent: async (id, e, image) => {
+        if (!uid) return false;
+        const old = events.find((x) => x.id === id);
+        const fields: Record<string, string | null> = {
+          title: e.title.trim(),
+          description: e.description.trim(),
+          place: e.place.trim(),
+          starts_at: e.startsAt.toISOString(),
+        };
+        if (image === 'remove') fields.image_url = null;
+        else if (image !== 'keep') {
+          const url = await uploadEventPhoto(uid, image.uri);
+          if (!url) return false;
+          fields.image_url = url;
+        }
+        const { data, error: err } = await supabase.from('events').update(fields).eq('id', id).select('id');
+        if (err || !data || data.length === 0) return false;
+        if (image !== 'keep') await removeEventPhoto(old?.imageUrl);
+        await refresh();
+        return true;
+      },
+      deleteEvent: async (id) => {
+        const old = events.find((x) => x.id === id);
+        const { data, error: err } = await supabase.from('events').delete().eq('id', id).select('id');
+        if (err || !data || data.length === 0) return false;
+        await removeEventPhoto(old?.imageUrl);
         await refresh();
         return true;
       },

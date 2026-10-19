@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Linking, ScrollView, View } from 'react-native';
+import { Alert, Image, Linking, ScrollView, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, DateTile, IconBadge, Txt } from '@/components/ui';
-import { canDirectMessage, useAuth } from '@/lib/auth';
+import { canCreateEvents, canDirectMessage, useAuth } from '@/lib/auth';
 import { fullText } from '@/lib/dates';
 import { useEvents } from '@/lib/events';
 import { useI18n } from '@/lib/i18n';
@@ -11,7 +11,7 @@ import { space, usePalette } from '@/lib/theme';
 
 export default function EventDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { events } = useEvents();
+  const { events, deleteEvent } = useEvents();
   const { user } = useAuth();
   const { t, lang } = useI18n();
   const insets = useSafeAreaInsets();
@@ -19,6 +19,23 @@ export default function EventDetails() {
   const event = events.find((e) => e.id === id);
   if (!event) return null;
   const canWriteAuthor = !!user && canDirectMessage(user) && event.authorId !== user.id;
+
+  const isAuthor = !!user && event.authorId === user.id;
+  const canEdit = isAuthor && canCreateEvents(user);
+  const canDelete = isAuthor || user?.role === 'senior';
+
+  const askDelete = () =>
+    Alert.alert(t('deleteEvent'), t('deleteEventAsk'), [
+      { text: t('cancel'), style: 'cancel' },
+      {
+        text: t('delete'),
+        style: 'destructive',
+        onPress: async () => {
+          if (await deleteEvent(event.id)) router.back();
+          else Alert.alert(t('eventDeleteError'));
+        },
+      },
+    ]);
 
   const openMaps = () =>
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.place)}`);
@@ -47,6 +64,20 @@ export default function EventDetails() {
           <InfoRow icon="location-outline" label={t('where')} value={event.place} />
           <InfoRow icon="person-outline" label={t('author')} value={event.authorName} />
         </Card>
+
+        {canEdit || canDelete ? (
+          <View style={{ gap: space.sm }}>
+            {canEdit ? (
+              <Button
+                title={t('editEvent')}
+                variant="secondary"
+                icon="create-outline"
+                onPress={() => router.push({ pathname: '/event/new', params: { id: event.id } })}
+              />
+            ) : null}
+            {canDelete ? <Button title={t('deleteEvent')} variant="danger" icon="trash-outline" onPress={askDelete} /> : null}
+          </View>
+        ) : null}
       </ScrollView>
 
       <View

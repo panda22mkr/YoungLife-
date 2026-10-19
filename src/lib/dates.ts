@@ -38,3 +38,7 @@ export function parseDateTime(input: string): Date | null {
   }
   return date;
 }
+
+// Обратное преобразование для редактирования: Date -> «ДД.ММ.ГГГГ ЧЧ:ММ»
+export const formatDateTime = (d: Date) =>
+  `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
