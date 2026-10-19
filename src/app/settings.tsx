@@ -4,6 +4,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, IconBadge, ScreenTitle, Segmented, SwitchRow, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { unregisterPush } from '@/lib/push';
 import { Lang, useI18n } from '@/lib/i18n';
 import { ThemeChoice, usePrefs } from '@/lib/prefs';
 import { space } from '@/lib/theme';
@@ -79,7 +80,11 @@ export default function SettingsScreen() {
         onPress={() =>
           Alert.alert(t('signOut'), undefined, [
             { text: t('cancel'), style: 'cancel' },
-            { text: t('signOut'), style: 'destructive', onPress: signOut },
+            { text: t('signOut'), style: 'destructive', onPress: async () => {
+                await unregisterPush();
+                await signOut();
+              },
+            },
           ])
         }
       />

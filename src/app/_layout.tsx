@@ -16,6 +16,7 @@ import { AuthProvider, useAuth } from '@/lib/auth';
 import { EventsProvider } from '@/lib/events';
 import { I18nProvider } from '@/lib/i18n';
 import { PrefsProvider } from '@/lib/prefs';
+import { usePush } from '@/lib/push';
 import { font, usePalette, useScheme } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -47,6 +48,7 @@ function Routes() {
   const { user, loading } = useAuth();
   const c = usePalette();
   const scheme = useScheme();
+  usePush();
 
   // Заставка закрывается, когда проверен вход (чтобы не мигал экран входа).
   useEffect(() => {
