@@ -50,6 +50,9 @@ function Routes() {
           <Stack.Screen name="event/[id]" options={{ title: '' }} />
           <Stack.Screen name="event/new" options={{ title: '' }} />
           <Stack.Screen name="chat/[id]" options={{ title: '' }} />
+          <Stack.Screen name="tools/tree" options={{ title: '' }} />
+          <Stack.Screen name="tools/list" options={{ title: '' }} />
+          <Stack.Screen name="tools/map" options={{ title: '' }} />
           <Stack.Screen name="dm/[userId]" options={{ title: '' }} />
           <Stack.Screen name="settings" options={{ title: '' }} />
           <Stack.Screen name="profile-edit" options={{ title: '' }} />
