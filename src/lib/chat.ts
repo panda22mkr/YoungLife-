@@ -12,7 +12,7 @@ export type Message = {
   createdAt: Date;
 };
 
-export type SendResult = 'ok' | 'notAllowed' | 'error';
+export type SendResult = 'ok' | 'notAllowed' | 'rateLimited' | 'error';
 
 const PAGE = 100;
 // Запасное обновление на случай, если мгновенная доставка не сработала.
@@ -57,6 +57,7 @@ function reconcile(prev: Message[], fetched: Message[]): Message[] {
 }
 
 // RLS-ошибка Postgres (код 42501) значит «запрещено правилами», а не «нет связи».
+const isRateLimited = (e: { message?: string } | null) => !!e && /rate_limited/.test(e.message ?? '');
 const isForbidden = (e: { code?: string; message?: string } | null) =>
   !!e && (e.code === '42501' || /row-level security/i.test(e.message ?? ''));
 
@@ -146,7 +147,7 @@ export function useEventChat(eventId: string | undefined): Chat {
         .insert({ event_id: eventId, body: text })
         .select(select)
         .single();
-      if (err || !data) return isForbidden(err) ? 'notAllowed' : 'error';
+      if (err || !data) return isRateLimited(err) ? 'rateLimited' : isForbidden(err) ? 'notAllowed' : 'error';
       setMessages((prev) => merge(prev, [fromEventRow(data as unknown as EventRow)]));
       return 'ok';
     },
@@ -246,7 +247,7 @@ export function useDirectChat(otherId: string | undefined): Chat {
         .insert({ recipient_id: otherId, body: text })
         .select('id,sender_id,recipient_id,body,created_at')
         .single();
-      if (err || !data) return isForbidden(err) ? 'notAllowed' : 'error';
+      if (err || !data) return isRateLimited(err) ? 'rateLimited' : isForbidden(err) ? 'notAllowed' : 'error';
       setMessages((prev) => merge(prev, [fromRow(data as DirectRow)]));
       return 'ok';
     },

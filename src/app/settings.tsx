@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, IconBadge, ScreenTitle, Segmented, SwitchRow, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { unregisterPush } from '@/lib/push';
+import { deleteAccount } from '@/lib/safety';
 import { Lang, useI18n } from '@/lib/i18n';
 import { ThemeChoice, usePrefs } from '@/lib/prefs';
 import { space } from '@/lib/theme';
@@ -73,6 +74,24 @@ export default function SettingsScreen() {
         </Card>
       </Pressable>
 
+      <Pressable accessibilityRole="button" onPress={() => router.push('/blocked')}>
+        <Card style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
+          <IconBadge name="shield-outline" />
+          <View style={{ flex: 1 }}>
+            <Txt variant="strong">{t('blockedUsers')}</Txt>
+          </View>
+        </Card>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" onPress={() => router.push('/legal')}>
+        <Card style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
+          <IconBadge name="document-text-outline" />
+          <View style={{ flex: 1 }}>
+            <Txt variant="strong">{t('rulesPrivacy')}</Txt>
+          </View>
+        </Card>
+      </Pressable>
+
       <Button
         title={t('signOut')}
         variant="danger"
@@ -83,6 +102,26 @@ export default function SettingsScreen() {
             { text: t('signOut'), style: 'destructive', onPress: async () => {
                 await unregisterPush();
                 await signOut();
+              },
+            },
+          ])
+        }
+      />
+
+      <Button
+        title={t('deleteAccount')}
+        variant="ghost"
+        icon="trash-outline"
+        onPress={() =>
+          Alert.alert(t('deleteAccount'), t('deleteAccountAsk'), [
+            { text: t('cancel'), style: 'cancel' },
+            {
+              text: t('deleteAccount'),
+              style: 'destructive',
+              onPress: async () => {
+                await unregisterPush();
+                if (await deleteAccount(user.id)) await signOut();
+                else Alert.alert(t('deleteAccountError'));
               },
             },
           ])

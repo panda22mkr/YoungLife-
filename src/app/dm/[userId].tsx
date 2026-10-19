@@ -19,7 +19,7 @@ export default function DirectChatScreen() {
     <View style={{ flex: 1 }}>
       <Stack.Screen options={{ title: name || t('unknownUser') }} />
       {allowed ? (
-        <ChatView chat={chat} showNames={false} />
+        <ChatView chat={chat} showNames={false} kind="direct_message" />
       ) : (
         <View style={{ flex: 1, justifyContent: 'center' }}>
           <EmptyState icon="lock-closed-outline" title={t('groupOnly')} />

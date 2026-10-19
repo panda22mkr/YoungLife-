@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/auth';
 import type { Message, SendResult } from '@/lib/chat';
 import { fullText, timeText } from '@/lib/dates';
 import { useI18n } from '@/lib/i18n';
+import { blockUser, reportMessage } from '@/lib/safety';
 import { font, radius, space, usePalette } from '@/lib/theme';
 
 type ChatLike = {
@@ -37,10 +38,12 @@ export function ChatView({
   chat,
   showNames,
   canDeleteAny = false,
+  kind = 'event_message',
 }: {
   chat: ChatLike;
   showNames: boolean;
   canDeleteAny?: boolean;
+  kind?: 'event_message' | 'direct_message';
 }) {
   const { t, lang } = useI18n();
   const { user } = useAuth();
@@ -62,7 +65,7 @@ export function ChatView({
     const result = await chat.send(text);
     setSending(false);
     if (result === 'ok') setText('');
-    else setProblem(t(result === 'notAllowed' ? 'dmNotAllowed' : 'sendError'));
+    else setProblem(t(result === 'notAllowed' ? 'dmNotAllowed' : result === 'rateLimited' ? 'rateLimited' : 'sendError'));
   };
 
   const askDelete = (m: Message) =>
@@ -73,6 +76,36 @@ export function ChatView({
         },
       },
     ]);
+
+  const doReport = async (m: Message) =>
+    Alert.alert((await reportMessage(kind, m.id, m.senderId, m.body)) ? t('reportDone') : t('reportError'));
+
+  const doBlock = (m: Message) =>
+    Alert.alert(t('blockUser'), t('blockAsk'), [
+      { text: t('cancel'), style: 'cancel' },
+      {
+        text: t('blockUser'),
+        style: 'destructive',
+        onPress: async () => {
+          if (await blockUser(m.senderId)) {
+            await chat.refresh();
+            Alert.alert(t('blockDone'));
+          } else Alert.alert(t('reportError'));
+        },
+      },
+    ]);
+
+  // Нажатие и удержание: свои сообщения — удалить; чужие — пожаловаться / заблокировать (и удалить, если можно).
+  const openActions = (m: Message, mine: boolean) => {
+    if (mine) return askDelete(m);
+    const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [
+      { text: t('reportMessage'), onPress: () => doReport(m) },
+      { text: t('blockUser'), style: 'destructive', onPress: () => doBlock(m) },
+    ];
+    if (canDeleteAny) buttons.push({ text: t('delete'), style: 'destructive', onPress: () => askDelete(m) });
+    buttons.push({ text: t('cancel'), style: 'cancel' });
+    Alert.alert(t('messageActions'), undefined, buttons);
+  };
 
   return (
     <KeyboardAvoidingView
@@ -104,16 +137,15 @@ export function ChatView({
           contentContainerStyle={{ padding: space.screen, gap: 8 }}
           renderItem={({ item }) => {
             const mine = item.senderId === user?.id;
-            const deletable = mine || canDeleteAny;
-            return (
+                        return (
               <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, justifyContent: mine ? 'flex-end' : 'flex-start' }}>
                 {showNames && !mine ? (
                   <Avatar name={item.senderName || '?'} uri={item.senderAvatar} size={32} />
                 ) : null}
                 <Pressable
                   accessibilityRole="text"
-                  accessibilityHint={deletable ? t('deleteMessage') : undefined}
-                  onLongPress={deletable ? () => askDelete(item) : undefined}
+                  accessibilityHint={t('messageActions')}
+                  onLongPress={() => openActions(item, mine)}
                   delayLongPress={350}
                   style={{
                     maxWidth: '78%',

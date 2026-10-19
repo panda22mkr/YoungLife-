@@ -69,6 +69,7 @@ function Routes() {
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: c.bg },
         }}>
+        <Stack.Screen name="legal" options={{ title: '' }} />
         <Stack.Protected guard={!user}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         </Stack.Protected>
@@ -83,6 +84,7 @@ function Routes() {
           <Stack.Screen name="dm/[userId]" options={{ title: '' }} />
           <Stack.Screen name="settings" options={{ title: '' }} />
           <Stack.Screen name="donate" options={{ title: '' }} />
+          <Stack.Screen name="blocked" options={{ title: '' }} />
           <Stack.Screen name="profile-edit" options={{ title: '' }} />
         </Stack.Protected>
       </Stack>

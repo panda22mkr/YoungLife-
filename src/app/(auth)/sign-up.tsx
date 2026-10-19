@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button, Field, ScreenTitle } from '@/components/ui';
+import { Button, Field, ScreenTitle, Txt } from '@/components/ui';
 import { calcAge, MIN_AGE, MIN_PASSWORD, parseBirthDate, useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
 import { space } from '@/lib/theme';
@@ -68,6 +68,12 @@ export default function SignUp() {
           placeholder={t('birthHint')}
         />
         <View style={{ gap: space.sm, marginTop: space.sm }}>
+          <Txt variant="small" tone="muted" style={{ textAlign: 'center' }}>
+            {t('termsAccept')}{' '}
+            <Txt variant="small" tone="green" onPress={() => router.push('/legal')}>
+              {t('rulesPrivacy')}
+            </Txt>
+          </Txt>
           <Button title={t('signUp')} onPress={submit} loading={busy} />
           <Button title={t('haveAccount')} variant="ghost" onPress={() => router.back()} />
         </View>
