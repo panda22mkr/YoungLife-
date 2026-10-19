@@ -8,4 +8,4 @@ export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_5pJGA1_cNO_LxSkHKFWxMw_6
 // Ссылка для пожертвований (страница сбора на любой платформе: банк, Boosty, PayPal и т.п.).
 // Пока пусто: тогда на экране «Поддержать приложение» показывается «скоро».
 // Вставьте сюда ссылку вида 'https://...' — и кнопка заработает.
-export const DONATE_URL = '';
+export const DONATE_URL = 'https://boosty.to/yourcommunity';
